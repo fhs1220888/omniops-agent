@@ -1,0 +1,33 @@
+{
+  "logs": [
+    {
+      "service": "checkout-service",
+      "timestamp": "2026-06-26T08:00:00Z",
+      "level": "error",
+      "error_type": "PaymentTimeout",
+      "message": "payment provider timed out after 1500ms"
+    }
+  ],
+  "metrics": [
+    {
+      "service": "checkout-service",
+      "timestamp": "2026-06-26T08:00:00Z",
+      "name": "p95_latency_ms",
+      "value": 1750
+    },
+    {
+      "service": "checkout-service",
+      "timestamp": "2026-06-26T08:00:00Z",
+      "name": "error_rate_percent",
+      "value": 6.2
+    }
+  ],
+  "traces": [
+    {
+      "service": "checkout-service",
+      "timestamp": "2026-06-26T08:00:00Z",
+      "span": "checkout-service -> payment-provider charge",
+      "duration_ms": 1420
+    }
+  ]
+}

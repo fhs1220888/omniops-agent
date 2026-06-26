@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OmniOps Agent</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>OmniOps Agent</h1>
+          <p>Incident diagnosis, policy-gated tools, evidence graph, and AgentOps traces.</p>
+        </div>
+        <div class="status" id="status">Ready</div>
+      </header>
+
+      <section class="controls" aria-label="Demo controls">
+        <label>
+          Scenario
+          <select id="scenarioSelect">
+            <option value="redis_timeout">redis_timeout</option>
+            <option value="mysql_slow_query">mysql_slow_query</option>
+            <option value="kafka_lag">kafka_lag</option>
+            <option value="bad_config_deploy">bad_config_deploy</option>
+          </select>
+        </label>
+        <button id="runScenarioBtn">Run Scenario</button>
+        <button id="benchmarkBtn">Benchmark</button>
+        <button id="highRiskBtn">High-risk Tool Demo</button>
+      </section>
+
+      <section class="grid">
+        <article class="panel wide">
+          <h2>Scenario Result</h2>
+          <div class="summary-grid">
+            <div>
+              <span class="label">Root cause</span>
+              <strong id="rootCause">-</strong>
+            </div>
+            <div>
+              <span class="label">Confidence</span>
+              <strong id="confidence">-</strong>
+            </div>
+            <div>
+              <span class="label">Reflection</span>
+              <strong id="reflection">-</strong>
+            </div>
+            <div>
+              <span class="label">Replanning</span>
+              <strong id="replanning">-</strong>
+            </div>
+            <div>
+              <span class="label">Rounds</span>
+              <strong id="rounds">-</strong>
+            </div>
+          </div>
+          <h3>Final Report</h3>
+          <pre id="reportOutput" class="output">Run a scenario to see the RCA report.</pre>
+        </article>
+
+        <article class="panel">
+          <h2>Agent Timeline</h2>
+          <div id="agentTimeline" class="list"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Tool Timeline</h2>
+          <div id="toolTimeline" class="list"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Evidence Items</h2>
+          <div id="evidenceItems" class="list"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Policy Limits</h2>
+          <h3>Denied Tools</h3>
+          <div id="deniedTools" class="list"></div>
+          <h3>Approval Required</h3>
+          <div id="approvalRequiredTools" class="list"></div>
+        </article>
+
+        <article class="panel wide">
+          <h2>Evidence Graph JSON</h2>
+          <pre id="evidenceGraph" class="output">{}</pre>
+        </article>
+
+        <article class="panel">
+          <h2>Benchmark</h2>
+          <div class="summary-grid compact">
+            <div><span class="label">Scenarios</span><strong id="benchCount">-</strong></div>
+            <div><span class="label">RCA accuracy</span><strong id="benchAccuracy">-</strong></div>
+            <div><span class="label">Evidence precision</span><strong id="benchEvidence">-</strong></div>
+            <div><span class="label">Avg agents</span><strong id="benchAgents">-</strong></div>
+            <div><span class="label">Avg tools</span><strong id="benchTools">-</strong></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Approval Demo</h2>
+          <div id="approvalResult" class="list"></div>
+          <div class="approval-actions">
+            <button id="approveBtn" disabled>Approve</button>
+            <button id="rejectBtn" disabled>Reject</button>
+          </div>
+        </article>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
