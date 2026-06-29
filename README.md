@@ -201,6 +201,63 @@ For interview demos, verify runtime mode with:
 uv run python scripts/check_runtime_status.py
 ```
 
+## Live Real Observability Demo
+
+This path runs real local observability backends and a real instrumented demo service. Logs, metrics, and traces are produced by `order-service` and queried back through Loki, Prometheus, and Tempo.
+
+Start the stack:
+
+```bash
+cd /Users/fhs1220/omniops-agent
+docker compose -f deploy/docker-compose.observability.yml up -d
+```
+
+Generate traffic:
+
+```bash
+uv run python scripts/generate_demo_traffic.py
+```
+
+Enable live real mode:
+
+```bash
+cp .env.live.example .env
+# Manually add LLM_API_KEY in .env
+```
+
+Start OmniOps Agent:
+
+```bash
+uv run uvicorn app.main:app --reload --port 8001
+```
+
+Verify runtime and live backend data:
+
+```bash
+uv run python scripts/check_runtime_status.py
+uv run python scripts/run_live_demo_check.py
+uv run python scripts/smoke_real_observability.py
+```
+
+Useful local URLs:
+
+- OmniOps dashboard: `http://127.0.0.1:8001/`
+- order-service: `http://127.0.0.1:8002/health`
+- Prometheus: `http://127.0.0.1:9090/`
+- Loki: `http://127.0.0.1:3100/ready`
+- Tempo: `http://127.0.0.1:3200/ready`
+- Grafana: `http://127.0.0.1:3000/`
+
+Live real mode requires:
+
+```env
+USE_FAKE_LLM=false
+USE_FAKE_TOOLS=false
+OBSERVABILITY_BACKEND=prometheus_loki_tempo
+```
+
+If Prometheus, Loki, or Tempo are unreachable or empty, the tools return explicit `empty`/`error` evidence. They do not fall back to fake data.
+
 ## API Endpoints
 
 Incidents:

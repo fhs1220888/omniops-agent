@@ -72,14 +72,19 @@ class PrometheusProvider:
 def _prometheus_queries(service: str) -> list[tuple[str, str]]:
     selector = f'service="{service}"'
     return [
-        ("service_up", f'up{{{selector}}}'),
-        ("request_rate", f'sum(rate(http_requests_total{{{selector}}}[5m]))'),
+        ("service_up", f'up{{job="{service}"}} or up{{{selector}}}'),
+        (
+            "request_rate",
+            f'sum(rate(order_service_requests_total{{{selector}}}[5m])) or sum(rate(http_requests_total{{{selector}}}[5m]))',
+        ),
         (
             "error_rate_percent",
-            f'100 * sum(rate(http_requests_total{{{selector},status=~"5.."}}[5m])) / clamp_min(sum(rate(http_requests_total{{{selector}}}[5m])), 1)',
+            f'100 * sum(rate(order_service_requests_total{{{selector},status=~"5.."}}[5m])) / clamp_min(sum(rate(order_service_requests_total{{{selector}}}[5m])), 1) '
+            f'or 100 * sum(rate(http_requests_total{{{selector},status=~"5.."}}[5m])) / clamp_min(sum(rate(http_requests_total{{{selector}}}[5m])), 1)',
         ),
         (
             "p95_latency_ms",
-            f'1000 * histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{{selector}}}[5m])) by (le))',
+            f'1000 * histogram_quantile(0.95, sum(rate(order_service_request_duration_seconds_bucket{{{selector}}}[5m])) by (le)) '
+            f'or 1000 * histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{{selector}}}[5m])) by (le))',
         ),
     ]

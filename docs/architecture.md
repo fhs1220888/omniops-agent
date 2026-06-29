@@ -107,6 +107,18 @@ OBSERVABILITY_BACKEND=prometheus_loki_tempo
 
 Provider failures and empty responses are preserved as evidence metadata. The system does not silently fall back to fake data in file or live mode.
 
+## Local Live Demo Stack
+
+The local live demo uses `deploy/docker-compose.observability.yml`:
+
+- `order-service` produces real HTTP traffic, structured logs, Prometheus metrics, and OpenTelemetry traces.
+- Prometheus scrapes `order-service:/metrics`.
+- `order-service` pushes structured logs to Loki with `service=order-service` and `trace_id` fields.
+- OpenTelemetry Collector receives OTLP traces from `order-service` and forwards them to Tempo.
+- OmniOps queries Prometheus, Loki, and Tempo through the live observability provider.
+
+This keeps fake data out of the live demo path while preserving fake mode for unit tests and deterministic demos.
+
 Current high-risk or blocked tools:
 
 - `restart_service`

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import json
 
 import httpx
 
@@ -76,6 +77,12 @@ class LokiProvider:
 
 
 def _extract_trace_id(message: str) -> str | None:
+    try:
+        payload = json.loads(message)
+    except json.JSONDecodeError:
+        payload = {}
+    if isinstance(payload, dict) and payload.get("trace_id"):
+        return str(payload["trace_id"])
     match = re.search(r"(?:trace_id|traceId|traceID)=([a-zA-Z0-9_-]+)", message)
     if match:
         return match.group(1)
