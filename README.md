@@ -1,6 +1,10 @@
 # OmniOps Agent
 
+[![CI](https://github.com/fhs1220888/omniops-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/fhs1220888/omniops-agent/actions/workflows/ci.yml)
+
 ## Project Overview
+
+OmniOps is an observability-driven Agent Harness for multi-agent incident diagnosis and RCA.
 
 OmniOps Agent is a Python incident diagnosis MVP built with FastAPI, LangGraph, and LangChain-compatible abstractions. It simulates an enterprise incident intelligence workflow: create an incident, plan the investigation, run selected diagnostic tools concurrently, enforce tool risk policy, recall similar incidents, build an evidence graph, and generate an RCA report with AgentOps traces.
 
@@ -189,6 +193,20 @@ Expected current result:
 ```
 
 The warning is a FastAPI/Starlette `TestClient` deprecation warning and does not affect behavior.
+
+## Quality Gates
+
+- Unit tests: `73 passed`
+- Live integration tests: skipped by default unless `RUN_REAL_OBSERVABILITY_TESTS=true`
+- Repo safety check: ensures `.env`, API keys, caches, logs, and volume data are not tracked
+- Live demo: `scripts/demo_live.sh`
+
+Run local quality gates:
+
+```bash
+uv run pytest -q
+uv run python scripts/check_repo_safety.py
+```
 
 ## How To Run API Locally
 
