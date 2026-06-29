@@ -14,6 +14,23 @@ LOKI_URL = os.getenv("LOKI_URL", "http://localhost:3100").rstrip("/")
 TEMPO_URL = os.getenv("TEMPO_URL", "http://localhost:3200").rstrip("/")
 OMNIOPS_URL = os.getenv("OMNIOPS_URL", "http://localhost:8001").rstrip("/")
 SERVICE = os.getenv("SMOKE_SERVICE", "order-service")
+EXPECTED_ENDPOINTS = [
+    "/checkout",
+    "/checkout/slow",
+    "/checkout/error",
+    "/checkout/redis-timeout",
+    "/checkout/downstream-timeout",
+    "/checkout/db-slow-query",
+    "/checkout/app-exception",
+    "/checkout/unhealthy",
+]
+EXPECTED_EVENTS = [
+    "redis_timeout",
+    "downstream_timeout",
+    "db_slow_query",
+    "application_exception",
+    "service_unhealthy",
+]
 
 
 def main() -> None:
@@ -28,6 +45,8 @@ def main() -> None:
         "loki": {
             "reachable": loki["reachable"],
             "log_count": len(loki.get("logs", [])),
+            "events_found": _events_from_logs(loki.get("logs", [])),
+            "expected_events_present": _expected_events_present(loki.get("logs", [])),
             "error": loki.get("error"),
         },
         "tempo": tempo,
@@ -45,6 +64,7 @@ def main() -> None:
 
 def _check_prometheus() -> dict:
     query = f'up{{job="{SERVICE}"}} or up{{service="{SERVICE}"}}'
+    endpoint_metrics = _check_endpoint_metrics()
     try:
         response = httpx.get(
             f"{PROMETHEUS_URL}/api/v1/query",
@@ -59,6 +79,7 @@ def _check_prometheus() -> dict:
             "query": query,
             "up": bool(result),
             "result_count": len(result),
+            "endpoint_metrics": endpoint_metrics,
             "error": None,
         }
     except Exception as exc:
@@ -67,15 +88,41 @@ def _check_prometheus() -> dict:
             "query": query,
             "up": False,
             "result_count": 0,
+            "endpoint_metrics": endpoint_metrics,
             "error": str(exc),
         }
+
+
+def _check_endpoint_metrics() -> dict:
+    results = {}
+    for endpoint in EXPECTED_ENDPOINTS:
+        query = (
+            f'sum(order_service_requests_total{{service="{SERVICE}",'
+            f'endpoint="{endpoint}"}})'
+        )
+        try:
+            response = httpx.get(
+                f"{PROMETHEUS_URL}/api/v1/query",
+                params={"query": query},
+                timeout=3.0,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            values = payload.get("data", {}).get("result", [])
+            value = 0.0
+            if values:
+                value = float(values[0].get("value", [None, 0])[1])
+            results[endpoint] = {"found": value > 0, "count": value, "error": None}
+        except Exception as exc:
+            results[endpoint] = {"found": False, "count": 0, "error": str(exc)}
+    return results
 
 
 def _check_loki() -> dict:
     try:
         response = httpx.get(
             f"{LOKI_URL}/loki/api/v1/query_range",
-            params={"query": f'{{service="{SERVICE}"}}', "limit": "50"},
+            params={"query": f'{{service="{SERVICE}"}}', "limit": "200"},
             timeout=3.0,
         )
         response.raise_for_status()
@@ -109,6 +156,29 @@ def _trace_id_from_logs(logs: list[dict]) -> str | None:
         if match:
             return match.group(1)
     return None
+
+
+def _events_from_logs(logs: list[dict]) -> list[str]:
+    events = set()
+    for item in logs:
+        payload = _json_message(item.get("message", ""))
+        event = payload.get("event")
+        if event:
+            events.add(str(event))
+    return sorted(events)
+
+
+def _expected_events_present(logs: list[dict]) -> dict:
+    events = set(_events_from_logs(logs))
+    return {event: event in events for event in EXPECTED_EVENTS}
+
+
+def _json_message(message: str) -> dict:
+    try:
+        payload = json.loads(message)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _check_tempo(trace_id: str) -> dict:

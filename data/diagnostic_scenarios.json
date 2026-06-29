@@ -1,0 +1,59 @@
+[
+  {
+    "id": "redis_timeout",
+    "title": "Redis timeout during checkout",
+    "service": "order-service",
+    "symptom": "Checkout requests return 504 and latency increases.",
+    "expected_root_cause_keywords": ["redis", "connection pool", "timeout"],
+    "expected_tools": ["logs", "metrics", "traces"]
+  },
+  {
+    "id": "downstream_timeout",
+    "title": "Payment service timeout",
+    "service": "order-service",
+    "symptom": "Checkout requests fail with downstream payment timeout.",
+    "expected_root_cause_keywords": ["payment-service", "downstream", "timeout"],
+    "expected_tools": ["logs", "metrics", "traces"]
+  },
+  {
+    "id": "db_slow_query",
+    "title": "Database slow query",
+    "service": "order-service",
+    "symptom": "Checkout latency increases due to slow order lookup.",
+    "expected_root_cause_keywords": ["mysql", "slow query", "missing", "index"],
+    "expected_tools": ["logs", "metrics", "traces"]
+  },
+  {
+    "id": "app_exception",
+    "title": "Application exception spike",
+    "service": "order-service",
+    "symptom": "Checkout returns HTTP 500 errors.",
+    "expected_root_cause_keywords": ["application", "exception", "500"],
+    "expected_tools": ["logs", "metrics", "traces"]
+  },
+  {
+    "id": "service_unhealthy",
+    "title": "Service unhealthy response",
+    "service": "order-service",
+    "symptom": "Order service returns 503 unhealthy responses.",
+    "expected_root_cause_keywords": ["unhealthy", "503", "order-service"],
+    "expected_tools": ["logs", "metrics"]
+  },
+  {
+    "id": "latency_spike",
+    "title": "Checkout latency spike",
+    "service": "order-service",
+    "symptom": "Checkout p95 latency increases.",
+    "expected_root_cause_keywords": ["latency", "slow"],
+    "expected_tools": ["metrics", "traces"]
+  },
+  {
+    "id": "evidence_insufficient",
+    "title": "Unknown service with no evidence",
+    "service": "unknown-service",
+    "symptom": "Investigate failure for an unknown service.",
+    "expected_root_cause_keywords": ["insufficient", "no evidence", "empty"],
+    "expected_tools": ["logs", "metrics", "traces"],
+    "expect_evidence_insufficient": true
+  }
+]

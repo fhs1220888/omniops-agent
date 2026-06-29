@@ -15,6 +15,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import Status, StatusCode
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 
@@ -93,6 +94,7 @@ def checkout_slow() -> dict:
 def checkout_error() -> dict:
     with tracer.start_as_current_span("checkout_error"):
         _sleep(0.04, 0.08)
+        _mark_current_span_error("PaymentProviderError")
         _log(
             "checkout failed with upstream payment error",
             endpoint="/checkout/error",
@@ -106,13 +108,92 @@ def checkout_error() -> dict:
 def checkout_redis_timeout() -> dict:
     with tracer.start_as_current_span("checkout_redis_timeout"):
         _sleep(0.25, 0.4)
+        _mark_current_span_error("RedisTimeoutException")
         _log(
             "checkout failed: RedisTimeoutException after 250ms",
             endpoint="/checkout/redis-timeout",
+            event="redis_timeout",
             level="error",
             error_type="RedisTimeoutException",
         )
         raise HTTPException(status_code=504, detail="RedisTimeoutException")
+
+
+@app.get("/checkout/downstream-timeout")
+def checkout_downstream_timeout() -> dict:
+    with tracer.start_as_current_span("checkout_downstream_timeout"):
+        with tracer.start_as_current_span("payment-service.call") as span:
+            span.set_attribute("peer.service", "payment-service")
+            span.set_attribute("dependency", "payment-service")
+            span.set_attribute("error", True)
+            _sleep(0.35, 0.55)
+            span.set_status(Status(StatusCode.ERROR, "payment-service timeout"))
+        _mark_current_span_error("DownstreamTimeout")
+        _log(
+            "checkout failed: payment-service timed out",
+            endpoint="/checkout/downstream-timeout",
+            event="downstream_timeout",
+            dependency="payment-service",
+            level="error",
+            error_type="DownstreamTimeout",
+        )
+        raise HTTPException(status_code=504, detail="payment-service timeout")
+
+
+@app.get("/checkout/db-slow-query")
+def checkout_db_slow_query() -> dict:
+    with tracer.start_as_current_span("checkout_db_slow_query"):
+        with tracer.start_as_current_span("mysql.checkout_order_lookup") as span:
+            span.set_attribute("db.system", "mysql")
+            span.set_attribute("db.statement", "SELECT * FROM orders WHERE user_id=? AND status=?")
+            span.set_attribute("query_name", "checkout_order_lookup")
+            _sleep(0.75, 1.1)
+        _log(
+            "checkout degraded: slow MySQL order lookup",
+            endpoint="/checkout/db-slow-query",
+            event="db_slow_query",
+            db="mysql",
+            query_name="checkout_order_lookup",
+            suspected_issue="missing_composite_index",
+        )
+        return {
+            "status": "degraded",
+            "db": "mysql",
+            "query_name": "checkout_order_lookup",
+        }
+
+
+@app.get("/checkout/app-exception")
+def checkout_app_exception() -> dict:
+    with tracer.start_as_current_span("checkout_app_exception"):
+        _sleep(0.03, 0.06)
+        _mark_current_span_error("NullCartStateError")
+        _log(
+            "checkout failed: unexpected null cart state",
+            endpoint="/checkout/app-exception",
+            event="application_exception",
+            level="error",
+            exception_type="NullCartStateError",
+            error_message="cart state was unexpectedly null",
+            error_type="NullCartStateError",
+        )
+        raise HTTPException(status_code=500, detail="unexpected null cart state")
+
+
+@app.get("/checkout/unhealthy")
+def checkout_unhealthy() -> dict:
+    with tracer.start_as_current_span("checkout_unhealthy"):
+        _sleep(0.03, 0.08)
+        _mark_current_span_error("ServiceUnhealthy")
+        _log(
+            "order-service reported application-level unhealthy state",
+            endpoint="/checkout/unhealthy",
+            event="service_unhealthy",
+            level="error",
+            reason="dependency health budget exhausted",
+            error_type="ServiceUnhealthy",
+        )
+        raise HTTPException(status_code=503, detail="order-service unhealthy")
 
 
 @app.get("/metrics")
@@ -137,6 +218,7 @@ def _log(
     endpoint: str,
     level: str = "info",
     error_type: str | None = None,
+    **fields: str,
 ) -> None:
     trace_id = _current_trace_id()
     payload = {
@@ -149,8 +231,15 @@ def _log(
     }
     if error_type:
         payload["error_type"] = error_type
+    payload.update(fields)
     logger.info(json.dumps(payload, sort_keys=True))
     _push_to_loki(payload)
+
+
+def _mark_current_span_error(description: str) -> None:
+    span = trace.get_current_span()
+    span.set_attribute("error", True)
+    span.set_status(Status(StatusCode.ERROR, description))
 
 
 def _push_to_loki(payload: dict) -> None:

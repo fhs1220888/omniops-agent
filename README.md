@@ -155,6 +155,26 @@ The benchmark suite includes four fake scenarios:
 
 These are local deterministic data fixtures. They do not start Redis, MySQL, Kafka, Docker, or any external service.
 
+## Diagnostic Capability Matrix
+
+OmniOps currently supports live diagnosis for these microservice runtime failure types:
+
+- Redis timeout / connection pool exhaustion
+- Downstream service timeout
+- DB slow query / missing index signal
+- Application exception / 500 spike
+- Service unhealthy / 503
+- Latency spike
+- Evidence insufficient handling
+
+See [docs/diagnostic_capability_matrix.md](/Users/fhs1220/omniops-agent/docs/diagnostic_capability_matrix.md).
+
+Run the live diagnostic benchmark after starting the live stack and OmniOps API:
+
+```bash
+uv run python scripts/run_diagnostic_benchmark.py
+```
+
 ## Benchmark Results
 
 Latest generated report: [benchmark_report.md](/Users/fhs1220/omniops-agent/benchmark_report.md)

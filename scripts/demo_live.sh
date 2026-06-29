@@ -50,7 +50,7 @@ echo "Project: $ROOT_DIR"
 
 echo
 echo "== Starting observability stack =="
-docker compose -f "$COMPOSE_FILE" up -d
+docker compose -f "$COMPOSE_FILE" up -d --build
 
 echo
 echo "== Waiting for services =="
@@ -79,6 +79,10 @@ echo
 echo "== Running live smoke diagnosis =="
 uv run python scripts/smoke_real_observability.py
 
+echo
+echo "== Running diagnostic coverage benchmark =="
+uv run python scripts/run_diagnostic_benchmark.py
+
 cat <<'MSG'
 
 == Summary ==
@@ -86,6 +90,7 @@ Live demo completed.
 - order-service generated real traffic.
 - Prometheus, Loki, and Tempo were queried.
 - OmniOps runtime status and smoke diagnosis were checked.
+- Diagnostic scenario benchmark was executed.
 
 Expected live mode:
 - fake_llm_enabled=false

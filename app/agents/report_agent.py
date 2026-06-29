@@ -163,6 +163,49 @@ def build_rca_prompt(state: IncidentState) -> str:
 
 def build_fake_rca(state: IncidentState) -> tuple[RootCauseAnalysis, list[RecommendedAction]]:
     scenario = _detect_demo_scenario(state)
+    if not _has_non_empty_evidence(state):
+        return RootCauseAnalysis(
+            root_cause="Evidence insufficient: no non-empty logs, metrics, or traces were available.",
+            confidence=0.2,
+            impact="The system cannot determine a reliable root cause without observability evidence.",
+            supporting_evidence_ids=[item["id"] for item in state["evidence"]],
+        ), [
+            RecommendedAction(
+                action_type="investigate",
+                description="Verify observability backend reachability and service naming before RCA.",
+                owner="platform-oncall",
+                priority="high",
+            ),
+            RecommendedAction(
+                action_type="verify",
+                description="Confirm logs, metrics, and traces exist for the incident time window.",
+                owner="service-oncall",
+                priority="high",
+            ),
+        ]
+    if scenario == "downstream_timeout":
+        return _limit_supporting_evidence(
+            state,
+            RootCauseAnalysis(
+                root_cause="Downstream payment-service timeout caused checkout failures.",
+                confidence=0.84,
+                impact="Checkout requests returned 504 while waiting on the payment-service dependency.",
+                supporting_evidence_ids=[item["id"] for item in state["evidence"]],
+            ),
+        ), [
+            RecommendedAction(
+                action_type="investigate",
+                description="Inspect payment-service latency, saturation, and timeout budget.",
+                owner="payment-service",
+                priority="high",
+            ),
+            RecommendedAction(
+                action_type="mitigate",
+                description="Apply payment dependency timeout mitigation or route traffic to a healthy instance.",
+                owner="platform-oncall",
+                priority="high",
+            ),
+        ]
     if scenario == "mysql_slow_query":
         return _limit_supporting_evidence(
             state,
@@ -184,6 +227,75 @@ def build_fake_rca(state: IncidentState) -> tuple[RootCauseAnalysis, list[Recomm
                 description="Verify database latency and payment P95 latency return to baseline.",
                 owner="service-oncall",
                 priority="high",
+            ),
+        ]
+    if scenario == "app_exception":
+        return _limit_supporting_evidence(
+            state,
+            RootCauseAnalysis(
+                root_cause="Application exception in order-service caused HTTP 500 checkout failures.",
+                confidence=0.82,
+                impact="Checkout requests failed due to application-level exceptions.",
+                supporting_evidence_ids=[item["id"] for item in state["evidence"]],
+            ),
+        ), [
+            RecommendedAction(
+                action_type="investigate",
+                description="Inspect exception stack details and recent application code paths.",
+                owner="order-service",
+                priority="high",
+            ),
+            RecommendedAction(
+                action_type="verify",
+                description="Verify HTTP 500 rate returns to baseline after the fix.",
+                owner="service-oncall",
+                priority="high",
+            ),
+        ]
+    if scenario == "service_unhealthy":
+        return _limit_supporting_evidence(
+            state,
+            RootCauseAnalysis(
+                root_cause="order-service returned application-level unhealthy 503 responses.",
+                confidence=0.8,
+                impact="Checkout availability was degraded by unhealthy service responses.",
+                supporting_evidence_ids=[item["id"] for item in state["evidence"]],
+            ),
+        ), [
+            RecommendedAction(
+                action_type="investigate",
+                description="Check dependency health budgets and service readiness conditions.",
+                owner="order-service",
+                priority="high",
+            ),
+            RecommendedAction(
+                action_type="verify",
+                description="Confirm unhealthy responses stop and readiness checks remain stable.",
+                owner="platform-oncall",
+                priority="medium",
+            ),
+        ]
+    if scenario == "latency_spike":
+        return _limit_supporting_evidence(
+            state,
+            RootCauseAnalysis(
+                root_cause="Checkout latency spike was caused by slow request-path execution.",
+                confidence=0.81,
+                impact="Checkout p95 latency increased while requests still completed.",
+                supporting_evidence_ids=[item["id"] for item in state["evidence"]],
+            ),
+        ), [
+            RecommendedAction(
+                action_type="investigate",
+                description="Use traces to isolate the slow request-path span.",
+                owner="order-service",
+                priority="high",
+            ),
+            RecommendedAction(
+                action_type="verify",
+                description="Monitor p95 latency until it returns to baseline.",
+                owner="service-oncall",
+                priority="medium",
             ),
         ]
     if scenario == "kafka_lag":
@@ -268,6 +380,8 @@ def _detect_demo_scenario(state: IncidentState) -> str | None:
         service=state["service"],
         description=state.get("description"),
     )
+    if Settings.from_env().use_fake_tools and scenario == "latency_spike":
+        return None
     return None if scenario in {"generic", "redis_timeout"} else scenario
 
 
@@ -282,13 +396,21 @@ def _rca_matches_incident_context(
     )
     root_cause_text = root_cause.root_cause.lower()
     required_terms_by_scenario = {
+        "downstream_timeout": ["payment-service", "downstream", "timeout"],
         "mysql_slow_query": ["mysql", "database", "index", "payment_order", "query"],
+        "app_exception": ["application", "exception", "500"],
+        "service_unhealthy": ["unhealthy", "503", "order-service"],
+        "latency_spike": ["latency", "slow"],
         "kafka_lag": ["consumer", "lag", "inventory", "stock"],
         "bad_config_deploy": ["config", "deploy", "connection", "capacity"],
         "redis_timeout": ["redis", "connection", "pool", "timeout"],
     }
     blocked_terms_by_scenario = {
+        "downstream_timeout": ["redis", "mysql", "kafka"],
         "mysql_slow_query": ["redis", "kafka"],
+        "app_exception": ["redis", "mysql", "kafka"],
+        "service_unhealthy": ["redis", "mysql", "kafka"],
+        "latency_spike": ["redis", "mysql", "kafka"],
         "kafka_lag": ["redis", "mysql"],
         "bad_config_deploy": ["mysql", "kafka"],
         "redis_timeout": ["mysql", "kafka"],
@@ -317,6 +439,13 @@ def _limit_supporting_evidence(
         supporting_ids = [item["id"] for item in state["evidence"]]
     return root_cause.model_copy(
         update={"supporting_evidence_ids": supporting_ids}
+    )
+
+
+def _has_non_empty_evidence(state: IncidentState) -> bool:
+    return any(
+        str(item.get("metadata", {}).get("empty")) != "True"
+        for item in state["evidence"]
     )
 
 

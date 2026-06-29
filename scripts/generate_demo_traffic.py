@@ -19,6 +19,10 @@ def main() -> None:
         + ["/checkout/slow"] * 5
         + ["/checkout/error"] * 4
         + ["/checkout/redis-timeout"] * 4
+        + ["/checkout/downstream-timeout"] * 4
+        + ["/checkout/db-slow-query"] * 4
+        + ["/checkout/app-exception"] * 4
+        + ["/checkout/unhealthy"] * 4
     )
     counts: Counter[str] = Counter()
     for path in paths:

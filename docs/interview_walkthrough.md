@@ -61,6 +61,20 @@ OmniOps Harness responsibilities:
 
 This makes the project closer to an agent platform slice than a prompt wrapper.
 
+## What Failure Types Can It Diagnose?
+
+OmniOps is aimed at microservice runtime failures. The current live demo and diagnostic benchmark cover:
+
+- Redis timeout and connection pool exhaustion
+- Downstream payment-service timeout
+- Database slow query and missing index signal
+- Application exception and HTTP 500 spike
+- Service unhealthy response and HTTP 503
+- Latency spike
+- Evidence insufficient handling for unknown services
+
+The multi-agent value is not one `if` branch per failure. The value is the RCA workflow: planner-driven evidence collection, policy-gated tools, logs/metrics/traces correlation, evidence graph construction, reflection on sufficiency, and report generation. In real mode, tools do not fall back to fake data, so if the evidence is empty the system must surface that limitation instead of guessing.
+
 ## Current Limitations
 
 - Local JSON and in-memory state instead of durable storage.
