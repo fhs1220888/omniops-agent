@@ -35,6 +35,27 @@ FastAPI API
       -> report
 ```
 
+```mermaid
+flowchart LR
+    OS[order-service] -->|/metrics| P[Prometheus]
+    OS -->|structured logs| L[Loki]
+    OS -->|OTLP traces| OTel[OTel Collector]
+    OTel --> T[Tempo]
+
+    Agent[OmniOps Agent] --> Planner[Planner Agent]
+    Planner --> LogAgent[Log Agent]
+    Planner --> MetricAgent[Metric Agent]
+    Planner --> TraceAgent[Trace Agent]
+
+    LogAgent --> L
+    MetricAgent --> P
+    TraceAgent --> T
+
+    Agent --> Reflection[Reflection Agent]
+    Reflection --> Report[Report Agent]
+    Report --> LLM[Real LLM]
+```
+
 Core packages:
 
 - `app/api/`: FastAPI routers for incidents, approvals, and demo endpoints.
@@ -125,7 +146,7 @@ uv run pytest -q
 Expected current result:
 
 ```text
-51 passed, 1 warning
+63 passed, 3 skipped, 1 warning
 ```
 
 The warning is a FastAPI/Starlette `TestClient` deprecation warning and does not affect behavior.
@@ -205,37 +226,40 @@ uv run python scripts/check_runtime_status.py
 
 This path runs real local observability backends and a real instrumented demo service. Logs, metrics, and traces are produced by `order-service` and queried back through Loki, Prometheus, and Tempo.
 
-Start the stack:
+Before running the live demo, configure `.env` from the safe template and manually add your API key:
+
+```bash
+cp .env.live.example .env
+# Manually set LLM_API_KEY in .env
+```
+
+One-command demo:
+
+```bash
+bash scripts/demo_live.sh
+```
+
+Stop the demo stack:
+
+```bash
+bash scripts/stop_live_demo.sh
+```
+
+Stop the stack and remove volumes:
+
+```bash
+bash scripts/stop_live_demo.sh --volumes
+```
+
+Manual command chain:
 
 ```bash
 cd /Users/fhs1220/omniops-agent
 docker compose -f deploy/docker-compose.observability.yml up -d
-```
-
-Generate traffic:
-
-```bash
 uv run python scripts/generate_demo_traffic.py
-```
-
-Enable live real mode:
-
-```bash
-cp .env.live.example .env
-# Manually add LLM_API_KEY in .env
-```
-
-Start OmniOps Agent:
-
-```bash
 uv run uvicorn app.main:app --reload --port 8001
-```
-
-Verify runtime and live backend data:
-
-```bash
-uv run python scripts/check_runtime_status.py
 uv run python scripts/run_live_demo_check.py
+uv run python scripts/check_runtime_status.py
 uv run python scripts/smoke_real_observability.py
 ```
 
@@ -257,6 +281,60 @@ OBSERVABILITY_BACKEND=prometheus_loki_tempo
 ```
 
 If Prometheus, Loki, or Tempo are unreachable or empty, the tools return explicit `empty`/`error` evidence. They do not fall back to fake data.
+
+Expected live backend check:
+
+```json
+{
+  "live_real_mode": true,
+  "prometheus": {
+    "reachable": true,
+    "up": true
+  },
+  "loki": {
+    "reachable": true,
+    "log_count": 34
+  },
+  "tempo": {
+    "reachable": true,
+    "found": true
+  }
+}
+```
+
+Expected runtime status:
+
+```json
+{
+  "fake_llm_enabled": false,
+  "fake_tools_enabled": false,
+  "llm_mode": "real",
+  "tools_mode": "real",
+  "observability_backend": "prometheus_loki_tempo",
+  "prometheus_reachable": true,
+  "loki_reachable": true,
+  "tempo_reachable": true
+}
+```
+
+Expected smoke diagnosis:
+
+```json
+{
+  "executed_tools": ["logs", "metrics", "traces"],
+  "tool_sources": ["loki", "prometheus", "tempo"],
+  "root_cause": "Redis connection pool exhaustion in order-service.",
+  "confidence": 0.87
+}
+```
+
+The demo is not using fake logs, metrics, or traces when all of these are true:
+
+- `fake_tools_enabled` is `false`
+- `tools_mode` is `real`
+- `observability_backend` is `prometheus_loki_tempo`
+- `tool_sources` are `loki`, `prometheus`, and `tempo`
+- `run_live_demo_check.py` shows Prometheus, Loki, and Tempo all reachable
 
 ## API Endpoints
 

@@ -97,6 +97,24 @@ The observability tool layer has three modes:
 - `USE_FAKE_TOOLS=false` with `OBSERVABILITY_BACKEND=file`: file-backed observability records from `OBSERVABILITY_DATA_FILE`.
 - `USE_FAKE_TOOLS=false` with `OBSERVABILITY_BACKEND=prometheus_loki_tempo`: live Prometheus, Loki, and Tempo queries.
 
+Mode 1: fake tools.
+
+- Purpose: unit tests, deterministic demos, offline development.
+- Source: local deterministic generators.
+- Fallback behavior: this is the fallback mode, selected explicitly through configuration.
+
+Mode 2: file observability.
+
+- Purpose: replay exported real observability records without running vendor backends.
+- Source: JSON file with `logs`, `metrics`, and `traces`.
+- Fallback behavior: missing records produce explicit empty evidence; the system does not switch to generated fake data.
+
+Mode 3: live observability.
+
+- Purpose: interview demo and local integration with real backend APIs.
+- Source: Prometheus HTTP API, Loki HTTP API, and Tempo HTTP API.
+- Fallback behavior: backend failures become `empty`/`error` evidence records; the system does not switch to generated fake data.
+
 The live mode is the only direct backend mode:
 
 ```env
@@ -118,6 +136,14 @@ The local live demo uses `deploy/docker-compose.observability.yml`:
 - OmniOps queries Prometheus, Loki, and Tempo through the live observability provider.
 
 This keeps fake data out of the live demo path while preserving fake mode for unit tests and deterministic demos.
+
+Production integration usually requires adapting:
+
+- Prometheus metric names, such as request counters, error counters, and latency histograms.
+- Loki labels, especially the service label used by `{service="..."}` queries.
+- Tempo trace ID extraction from logs and trace payload shape.
+- Service naming conventions across metrics, logs, traces, incidents, and deployment metadata.
+- Authentication, TLS, tenant headers, and network routing for production observability backends.
 
 Current high-risk or blocked tools:
 
@@ -259,10 +285,8 @@ The implementation intentionally avoids:
 - PostgreSQL
 - Redis
 - Kafka runtime
-- Docker
-- frontend
 - vector database
 - Neo4j
 - LangSmith
 
-This keeps the project easy to run, easy to test, and focused on agent engineering mechanics before infrastructure expansion.
+The project includes a Docker Compose stack only for the local live observability demo. Core OmniOps state remains local and lightweight.
