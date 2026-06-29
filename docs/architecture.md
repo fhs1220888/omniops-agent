@@ -2,6 +2,61 @@
 
 OmniOps Agent is a local-first incident diagnosis system. It models the shape of an enterprise agent platform without requiring production infrastructure. The current implementation uses FastAPI, LangGraph, deterministic fake tools, local JSON memory, and pure Python explainability structures.
 
+## Harness Layer
+
+The `app/harness/` package describes the system as an Agent Harness. It is a lightweight contract layer over the existing workflow rather than a replacement for LangGraph or the Tool Gateway.
+
+The harness includes:
+
+- `HarnessConfig`: derives LLM mode, tools mode, observability backend, and evidence requirements from `app/core/config.py`.
+- `HarnessPolicy`: exposes tool allow/review/deny behavior and report evidence sufficiency rules while reusing the existing Tool Gateway policy.
+- `HarnessExecutionTrace`: describes agent steps, tool calls, evidence items, failures, and timing as one trace contract.
+- `EvidenceContract`: documents the required shape for tool evidence: source, tool, service, empty, error, and items.
+- `HarnessResult`: summarizes root cause, confidence, evidence count, executed tools, failed tools, tool sources, and evidence sufficiency.
+- `OmniOpsHarnessRuntime`: describes harness capabilities, validates runtime mode, and summarizes diagnosis results.
+
+The status endpoint `GET /api/harness/status` combines harness identity, capabilities, runtime mode, live backend reachability, and evidence policy. It reuses the existing runtime status service instead of duplicating backend probes.
+
+## Harness vs Agent vs Tool
+
+- Harness: the orchestration boundary. It owns contracts for configuration, policy, evidence, execution trace, runtime status, and result summaries.
+- Agent: a workflow node with a specific responsibility, such as planner, triage, investigation, reflection, or report.
+- Tool: an external or local capability called by the investigation layer, such as logs, metrics, traces, memory, or high-risk operational tools.
+
+The LLM is not the harness. It is one model used by the report agent after the harness has gathered and constrained evidence.
+
+## Real Mode Anti-Fallback Guarantees
+
+The harness and provider layer preserve the same rule: real mode must not silently fall back to fake data.
+
+The live real mode is:
+
+```env
+USE_FAKE_LLM=false
+USE_FAKE_TOOLS=false
+OBSERVABILITY_BACKEND=prometheus_loki_tempo
+```
+
+When live mode is enabled:
+
+- fake tools are disabled by configuration
+- providers return explicit empty/error payloads for backend failures
+- evidence count can be zero, but the report must mark evidence insufficient
+- failed tools remain visible in the final result
+- `/api/runtime/status` and `/api/harness/status` expose whether fake tools are enabled
+
+## Future Harness Extensions
+
+The harness boundary is intended to make new backends and tool systems additive:
+
+- Kubernetes: add providers or tools for events, pod status, deployment history, and rollout metadata.
+- Datadog: add metrics, logs, and trace providers behind the same evidence contract.
+- CloudWatch: add AWS logs and metrics providers with service naming normalization.
+- PagerDuty or incident systems: add incident enrichment while preserving the same `HarnessResult`.
+- MCP-style adapters: map external MCP tools through the existing Tool Gateway policy.
+
+Production integration should customize metric names, Loki labels, Tempo trace lookup, authentication, tenant headers, TLS, and service naming conventions without changing the core agent workflow.
+
 ## LangGraph Workflow
 
 The diagnosis graph is defined in `app/agents/graph.py`.

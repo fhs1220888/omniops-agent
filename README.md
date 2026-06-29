@@ -60,6 +60,7 @@ Core packages:
 
 - `app/api/`: FastAPI routers for incidents, approvals, and demo endpoints.
 - `app/agents/`: LangGraph nodes and agent orchestration.
+- `app/harness/`: Agent Harness contracts for config, policy, traces, evidence, and result summaries.
 - `app/tools/`: observability tools, Tool Gateway, registry, and policy engine.
 - `app/memory/`: local JSON incident memory and similar incident recall.
 - `app/rag/`: pure Python in-memory evidence graph.
@@ -68,6 +69,44 @@ Core packages:
 - `app/models/`: Pydantic schemas for incidents, traces, evidence, approvals, and diagnosis output.
 
 More detail is in [docs/architecture.md](/Users/fhs1220/omniops-agent/docs/architecture.md).
+
+## Agent Harness Design
+
+OmniOps is organized as an Agent Harness, not a prompt wrapper. The LLM is one model component used by the report step. The harness is the engineering layer around the model: it plans work, governs tools, normalizes evidence, tracks execution, reflects on sufficiency, exposes runtime status, and verifies live demo mode.
+
+```text
+LLM Model
+   ^
+Report / Reflection Agents
+   ^
+OmniOps Agent Harness
+   |-- Planner
+   |-- Tool Gateway
+   |-- Evidence Contract
+   |-- Execution Trace
+   |-- Observability Providers
+   `-- Runtime Status
+        |-- Prometheus
+        |-- Loki
+        `-- Tempo
+```
+
+Harness components:
+
+- `Planner`: chooses which investigation tools are needed for the incident.
+- `Tool Gateway`: applies allow/review/deny policy before execution.
+- `Evidence Contract`: requires tool outputs to declare source, empty/error state, and evidence items.
+- `Execution Trace`: unifies agent steps, tool calls, evidence, and failures.
+- `Observability Providers`: connect fake, file, or live Prometheus/Loki/Tempo modes behind one interface.
+- `Runtime Status`: proves whether the system is fake, file-backed, or live real mode.
+
+In live mode, fake tool fallback is explicitly disabled. If Prometheus, Loki, or Tempo are empty or unreachable, the diagnosis must carry that limitation instead of inventing evidence. This is the project boundary that makes the harness more than a chatbot: the model is constrained by planning, policy, evidence contracts, runtime checks, and deterministic evaluation scripts.
+
+Harness status API:
+
+```bash
+curl http://127.0.0.1:8001/api/harness/status
+```
 
 ## Core Workflow
 
@@ -359,6 +398,11 @@ Demo:
 - `POST /api/demo/run/{scenario_name}`
 - `GET /api/demo/benchmark`
 - `POST /api/demo/high-risk-tool`
+
+Harness and runtime:
+
+- `GET /api/runtime/status`
+- `GET /api/harness/status`
 
 ## Example API Flow
 
