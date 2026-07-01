@@ -17,6 +17,8 @@ OmniOps includes a lightweight RAG Knowledge Base for long-term diagnostic guida
 
 Prometheus, Loki, and Tempo remain the live evidence layer. RAG is the knowledge layer.
 
+Observability Profiles configure how OmniOps queries each real evidence backend. RAG retrieval does not replace those profile-driven live queries.
+
 ## Current Backend
 
 The first implementation uses:

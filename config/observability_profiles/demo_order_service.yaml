@@ -1,0 +1,24 @@
+name: demo_order_service
+
+service:
+  default_service_label: service
+  default_service_name: order-service
+
+prometheus:
+  request_count_metric: order_service_requests_total
+  latency_bucket_metric: order_service_request_duration_seconds_bucket
+  service_label: service
+  endpoint_label: endpoint
+  status_label: status_code
+  latency_window: 5m
+
+loki:
+  service_label: service
+  trace_id_fields:
+    - trace_id
+    - traceId
+    - traceID
+  default_limit: 100
+
+tempo:
+  trace_id_source: loki

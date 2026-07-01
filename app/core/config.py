@@ -29,6 +29,8 @@ class Settings(BaseModel):
     prometheus_url: str = "http://localhost:9090"
     loki_url: str = "http://localhost:3100"
     tempo_url: str = "http://localhost:3200"
+    observability_profile: str = "demo_order_service"
+    observability_profile_dir: str = "config/observability_profiles"
     rag_enabled: bool = False
     rag_backend: str = "local_chroma"
     rag_collection: str = "omniops_runbooks"
@@ -56,6 +58,8 @@ class Settings(BaseModel):
             prometheus_url=_env("PROMETHEUS_URL", "http://localhost:9090", env_values),
             loki_url=_env("LOKI_URL", "http://localhost:3100", env_values),
             tempo_url=_env("TEMPO_URL", "http://localhost:3200", env_values),
+            observability_profile=_env("OBSERVABILITY_PROFILE", "demo_order_service", env_values),
+            observability_profile_dir=_env("OBSERVABILITY_PROFILE_DIR", "config/observability_profiles", env_values),
             rag_enabled=_read_bool("RAG_ENABLED", default=False, env_values=env_values),
             rag_backend=_env("RAG_BACKEND", "local_chroma", env_values),
             rag_collection=_env("RAG_COLLECTION", "omniops_runbooks", env_values),

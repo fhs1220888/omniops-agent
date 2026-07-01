@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import httpx
 
+from app.observability.profile import ObservabilityProfile, load_observability_profile
+
 
 class TempoProvider:
-    def __init__(self, base_url: str, timeout_seconds: float = 5.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        profile: ObservabilityProfile | None = None,
+        timeout_seconds: float = 5.0,
+    ) -> None:
         if not base_url:
             raise ValueError("TEMPO_URL is required for prometheus_loki_tempo backend.")
         self.base_url = base_url.rstrip("/")
+        self.profile = profile or load_observability_profile()
         self.timeout_seconds = timeout_seconds
 
     def query_traces(
@@ -24,6 +32,8 @@ class TempoProvider:
             return {
                 "source": "tempo",
                 "service": service,
+                "profile_name": self.profile.name,
+                "trace_id_source": self.profile.tempo.trace_id_source,
                 "traces": [],
                 "trace_ids": [],
                 "empty": True,
@@ -40,6 +50,8 @@ class TempoProvider:
         return {
             "source": "tempo",
             "service": service,
+            "profile_name": self.profile.name,
+            "trace_id_source": self.profile.tempo.trace_id_source,
             "traces": traces,
             "trace_ids": ids,
             "empty": not traces,

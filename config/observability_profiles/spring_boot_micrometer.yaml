@@ -1,0 +1,24 @@
+name: spring_boot_micrometer
+
+service:
+  default_service_label: application
+
+prometheus:
+  request_count_metric: http_server_requests_seconds_count
+  latency_bucket_metric: http_server_requests_seconds_bucket
+  service_label: application
+  endpoint_label: uri
+  status_label: status
+  latency_window: 5m
+
+loki:
+  service_label: app
+  trace_id_fields:
+    - trace_id
+    - traceId
+    - traceID
+    - traceid
+  default_limit: 100
+
+tempo:
+  trace_id_source: loki

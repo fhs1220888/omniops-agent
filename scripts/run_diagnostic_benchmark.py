@@ -64,6 +64,7 @@ def main() -> int:
         ),
         "rag_enabled": settings.rag_enabled,
         "skills_enabled": settings.skills_enabled,
+        "observability_profile": settings.observability_profile,
         "average_retrieved_knowledge_count": round(
             mean(item["retrieved_knowledge_count"] for item in results),
             3,

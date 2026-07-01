@@ -29,7 +29,7 @@ logger = logging.getLogger(SERVICE_NAME)
 REQUESTS = Counter(
     "order_service_requests_total",
     "Total order-service HTTP requests.",
-    ["service", "endpoint", "status"],
+    ["service", "endpoint", "status_code"],
 )
 LATENCY = Histogram(
     "order_service_request_duration_seconds",

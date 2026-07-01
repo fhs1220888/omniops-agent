@@ -232,6 +232,26 @@ The local live demo uses `deploy/docker-compose.observability.yml`:
 
 This keeps fake data out of the live demo path while preserving fake mode for unit tests and deterministic demos.
 
+## Observability Profiles
+
+Observability Profiles live in `config/observability_profiles/`. They make real project integration configurable:
+
+- Prometheus request count metric
+- Prometheus latency bucket metric
+- service label
+- endpoint label
+- status label
+- Loki service label
+- Loki trace ID fields
+- Tempo trace ID source
+
+The provider layer loads `OBSERVABILITY_PROFILE` and builds PromQL / LogQL from profile settings. If a profile is missing or invalid, live tools return explicit empty/error payloads rather than falling back to fake data.
+
+Profile APIs:
+
+- `GET /api/observability/profile`
+- `GET /api/observability/profiles`
+
 Production integration usually requires adapting:
 
 - Prometheus metric names, such as request counters, error counters, and latency histograms.

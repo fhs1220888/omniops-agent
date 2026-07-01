@@ -332,6 +332,7 @@ Mode 3: live observability with Prometheus, Loki, and Tempo.
 ```env
 USE_FAKE_TOOLS=false
 OBSERVABILITY_BACKEND=prometheus_loki_tempo
+OBSERVABILITY_PROFILE=demo_order_service
 PROMETHEUS_URL=http://localhost:9090
 LOKI_URL=http://localhost:3100
 TEMPO_URL=http://localhost:3200
@@ -364,6 +365,35 @@ For interview demos, verify runtime mode with:
 ```bash
 uv run python scripts/check_runtime_status.py
 ```
+
+## Real Project Integration
+
+OmniOps can be connected to real Prometheus, Loki, and Tempo backends as a read-only RCA copilot. Observability Profiles let you adapt metric names, labels, and trace ID extraction without editing Python provider code.
+
+Example Spring Boot / Micrometer configuration:
+
+```env
+USE_FAKE_TOOLS=false
+OBSERVABILITY_BACKEND=prometheus_loki_tempo
+OBSERVABILITY_PROFILE=spring_boot_micrometer
+PROMETHEUS_URL=http://your-prometheus:9090
+LOKI_URL=http://your-loki:3100
+TEMPO_URL=http://your-tempo:3200
+```
+
+Current profiles:
+
+- `demo_order_service`
+- `generic`
+- `spring_boot_micrometer`
+- `fastapi_prometheus`
+
+Profile APIs:
+
+- `GET /api/observability/profile`
+- `GET /api/observability/profiles`
+
+More detail: [docs/real_project_integration.md](/Users/fhs1220/omniops-agent/docs/real_project_integration.md).
 
 ## Live Real Observability Demo
 

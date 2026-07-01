@@ -17,6 +17,7 @@ def get_runtime_status(settings: Settings | None = None) -> dict:
         "llm_mode": "fake" if config.use_fake_llm else "real",
         "tools_mode": _tools_mode(config),
         "observability_backend": config.observability_backend,
+        "observability_profile": config.observability_profile,
         "prometheus_reachable": _reachable(config.prometheus_url, "/-/ready")
         if live_backend
         else False,

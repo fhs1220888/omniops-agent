@@ -1,0 +1,23 @@
+name: generic
+
+service:
+  default_service_label: service
+
+prometheus:
+  request_count_metric: http_requests_total
+  latency_bucket_metric: http_request_duration_seconds_bucket
+  service_label: service
+  endpoint_label: endpoint
+  status_label: status
+  latency_window: 5m
+
+loki:
+  service_label: service
+  trace_id_fields:
+    - trace_id
+    - traceId
+    - traceID
+  default_limit: 100
+
+tempo:
+  trace_id_source: loki

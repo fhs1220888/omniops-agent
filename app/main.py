@@ -11,6 +11,7 @@ from app.api.demo import router as demo_router
 from app.api.harness import router as harness_router
 from app.api.incidents import router as incidents_router
 from app.api.knowledge import router as knowledge_router
+from app.api.observability import router as observability_router
 from app.api.runtime import router as runtime_router
 from app.api.skills import router as skills_router
 from app.core.config import settings
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(runtime_router, prefix=settings.api_prefix)
     app.include_router(knowledge_router, prefix=settings.api_prefix)
     app.include_router(skills_router, prefix=settings.api_prefix)
+    app.include_router(observability_router, prefix=settings.api_prefix)
     static_dir = Path(__file__).resolve().parent / "static"
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 

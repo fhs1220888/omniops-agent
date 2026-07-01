@@ -51,6 +51,7 @@ def main() -> None:
         },
         "tempo": tempo,
         "runtime_status": runtime,
+        "observability_profile": runtime.get("observability_profile"),
         "live_real_mode": (
             runtime.get("llm_mode") == "real"
             and runtime.get("tools_mode") == "real"

@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import httpx
 
+from app.observability.profile import ObservabilityProfile, load_observability_profile
+
 
 class PrometheusProvider:
-    def __init__(self, base_url: str, timeout_seconds: float = 5.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        profile: ObservabilityProfile | None = None,
+        timeout_seconds: float = 5.0,
+    ) -> None:
         if not base_url:
             raise ValueError("PROMETHEUS_URL is required for prometheus_loki_tempo backend.")
         self.base_url = base_url.rstrip("/")
+        self.profile = profile or load_observability_profile()
         self.timeout_seconds = timeout_seconds
 
     def query_metrics(
@@ -18,7 +26,7 @@ class PrometheusProvider:
         start_time: str | None,
         end_time: str | None,
     ) -> dict:
-        queries = _prometheus_queries(service)
+        queries = prometheus_queries(service, self.profile)
         metrics: list[dict] = []
         errors: list[str] = []
         for name, query in queries:
@@ -34,11 +42,13 @@ class PrometheusProvider:
                         "name": name,
                         "value": values[0],
                         "query": query,
+                        "profile_name": self.profile.name,
                     }
                 )
         return {
             "source": "prometheus",
             "service": service,
+            "profile_name": self.profile.name,
             "queries": [query for _, query in queries],
             "metrics": metrics,
             "empty": not metrics,
@@ -69,22 +79,32 @@ class PrometheusProvider:
         return {"values": values, "error": None}
 
 
-def _prometheus_queries(service: str) -> list[tuple[str, str]]:
-    selector = f'service="{service}"'
+def prometheus_queries(
+    service: str,
+    profile: ObservabilityProfile | None = None,
+) -> list[tuple[str, str]]:
+    config = profile or load_observability_profile()
+    prometheus = config.prometheus
+    selector = f'{prometheus.service_label}="{service}"'
+    status_selector = (
+        f'{prometheus.service_label}="{service}",'
+        f'{prometheus.status_label}=~"5.."'
+    )
+    window = prometheus.latency_window
     return [
         ("service_up", f'up{{job="{service}"}} or up{{{selector}}}'),
         (
             "request_rate",
-            f'sum(rate(order_service_requests_total{{{selector}}}[5m])) or sum(rate(http_requests_total{{{selector}}}[5m]))',
+            f"sum(rate({prometheus.request_count_metric}{{{selector}}}[{window}]))",
         ),
         (
             "error_rate_percent",
-            f'100 * sum(rate(order_service_requests_total{{{selector},status=~"5.."}}[5m])) / clamp_min(sum(rate(order_service_requests_total{{{selector}}}[5m])), 1) '
-            f'or 100 * sum(rate(http_requests_total{{{selector},status=~"5.."}}[5m])) / clamp_min(sum(rate(http_requests_total{{{selector}}}[5m])), 1)',
+            f"100 * sum(rate({prometheus.request_count_metric}{{{status_selector}}}[{window}])) / "
+            f"clamp_min(sum(rate({prometheus.request_count_metric}{{{selector}}}[{window}])), 1)",
         ),
         (
             "p95_latency_ms",
-            f'1000 * histogram_quantile(0.95, sum(rate(order_service_request_duration_seconds_bucket{{{selector}}}[5m])) by (le)) '
-            f'or 1000 * histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{{selector}}}[5m])) by (le))',
+            f"1000 * histogram_quantile(0.95, "
+            f"sum(rate({prometheus.latency_bucket_metric}{{{selector}}}[{window}])) by (le))",
         ),
     ]

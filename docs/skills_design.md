@@ -12,6 +12,8 @@ OmniOps supports Markdown Skills as reusable agent behavior packages.
 
 Skills do not execute actions directly. They guide the Report Agent or Reflection Agent on how to use live evidence and tool results.
 
+Observability Profiles decide how live evidence is queried. Skills decide how agents reason about that evidence.
+
 ## Why Markdown?
 
 Markdown keeps skills easy to review, version, and extend. A skill is a reusable prompt and workflow package with:

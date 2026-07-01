@@ -26,6 +26,7 @@ Then explain the layers:
 - The Agent Harness layer describes config, policy, evidence contracts, execution trace, and result summaries.
 - The RAG Knowledge Base retrieves runbooks and SOPs as guidance, while Prometheus/Loki/Tempo remain the source of live evidence.
 - The Skill layer loads Markdown `SKILL.md` files that guide reusable diagnosis behavior.
+- Observability Profiles make Prometheus/Loki/Tempo query labels and metric names configurable for real projects.
 
 ## How To Prove It Is Not Fake Data
 
@@ -43,8 +44,15 @@ Then show:
 - `/api/harness/status` reports fake tool fallback is not allowed.
 - `scripts/run_live_demo_check.py` finds `order-service` metrics in Prometheus, logs in Loki, and traces in Tempo.
 - `scripts/smoke_real_observability.py` reports tool sources `["loki", "prometheus", "tempo"]`.
+- Runtime status shows the selected `observability_profile`.
 
 If a backend is empty or unreachable, tools return explicit `empty` or `error` evidence. They do not switch to generated fake data.
+
+## How To Explain Real Project Integration
+
+For a real project, I would select or create an Observability Profile. The profile controls Prometheus metric names, service labels, endpoint labels, status labels, Loki labels, and trace ID extraction fields. That means I do not need to rewrite provider Python code for every stack.
+
+Example: Spring Boot services can use `spring_boot_micrometer`; FastAPI services can use `fastapi_prometheus`; unknown stacks can start from `generic`.
 
 ## How To Explain Agent Harness
 

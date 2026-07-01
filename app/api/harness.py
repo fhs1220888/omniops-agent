@@ -23,6 +23,7 @@ def harness_status() -> dict:
         "llm_mode": config.llm_mode,
         "tools_mode": config.tools_mode,
         "observability_backend": config.observability_backend,
+        "observability_profile": runtime_status["observability_profile"],
         "live_backend_reachability": {
             "prometheus": runtime_status["prometheus_reachable"],
             "loki": runtime_status["loki_reachable"],

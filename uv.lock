@@ -364,6 +364,7 @@ dependencies = [
     { name = "langchain" },
     { name = "langgraph" },
     { name = "pydantic" },
+    { name = "pyyaml" },
     { name = "uvicorn" },
 ]
 
@@ -380,6 +381,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=0.6.11" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "uvicorn", specifier = ">=0.39.0" },
 ]
 provides-extras = ["dev"]
