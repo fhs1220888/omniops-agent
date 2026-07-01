@@ -29,6 +29,14 @@ class Settings(BaseModel):
     prometheus_url: str = "http://localhost:9090"
     loki_url: str = "http://localhost:3100"
     tempo_url: str = "http://localhost:3200"
+    rag_enabled: bool = False
+    rag_backend: str = "local_chroma"
+    rag_collection: str = "omniops_runbooks"
+    rag_data_dir: str = ".chroma"
+    rag_docs_dir: str = "knowledge_base"
+    rag_top_k: int = 3
+    embedding_provider: str = "local"
+    embedding_dim: int = 384
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -45,6 +53,14 @@ class Settings(BaseModel):
             prometheus_url=_env("PROMETHEUS_URL", "http://localhost:9090", env_values),
             loki_url=_env("LOKI_URL", "http://localhost:3100", env_values),
             tempo_url=_env("TEMPO_URL", "http://localhost:3200", env_values),
+            rag_enabled=_read_bool("RAG_ENABLED", default=False, env_values=env_values),
+            rag_backend=_env("RAG_BACKEND", "local_chroma", env_values),
+            rag_collection=_env("RAG_COLLECTION", "omniops_runbooks", env_values),
+            rag_data_dir=_env("RAG_DATA_DIR", ".chroma", env_values),
+            rag_docs_dir=_env("RAG_DOCS_DIR", "knowledge_base", env_values),
+            rag_top_k=int(_env("RAG_TOP_K", "3", env_values)),
+            embedding_provider=_env("EMBEDDING_PROVIDER", "local", env_values),
+            embedding_dim=int(_env("EMBEDDING_DIM", "384", env_values)),
         )
 
 

@@ -22,6 +22,10 @@ All supported live scenarios are triggered by real `order-service` HTTP requests
 
 The Agent tools query Prometheus, Loki, and Tempo. In live mode they do not fall back to fake data.
 
+## Knowledge Guidance Path
+
+RAG retrieves matching runbooks and SOPs from `knowledge_base/`. This helps the Report Agent explain diagnosis steps and mitigation options, but it is not counted as real-time evidence. A runbook match cannot override empty logs, metrics, or traces.
+
 ## What This Covers
 
 This is microservice runtime diagnosis, not a universal AIOps engine. The current coverage is strongest for request-path failures where logs, metrics, and traces expose the symptom:

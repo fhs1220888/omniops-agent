@@ -7,12 +7,15 @@ import json
 from app.agents.state import IncidentState
 from app.core.config import Settings
 from app.core.incident_scenarios import detect_incident_scenario
+from app.knowledge.retriever import KnowledgeRetriever
 from app.llm.client import LLMClient, build_llm_client, validate_rca_json
 from app.models.incident import AgentFinding, RecommendedAction, RootCauseAnalysis
 
 
 def report_agent(state: IncidentState) -> dict:
-    root_cause, action_models = generate_rca_from_state(state)
+    retrieved_knowledge = retrieve_knowledge_for_state(state)
+    state_with_knowledge = {**state, "retrieved_knowledge": retrieved_knowledge}
+    root_cause, action_models = generate_rca_from_state(state_with_knowledge)
     evidence_lines = "\n".join(
         f"- {item['id']}: {item['summary']}" for item in state["evidence"]
     ) or "- No evidence was collected."
@@ -46,6 +49,9 @@ The diagnosis points to `{root_cause.root_cause}` affecting `{state['service']}`
 ## Policy Decisions
 {_format_policy_decisions(state)}
 
+## Retrieved Runbook Guidance
+{_format_retrieved_knowledge(retrieved_knowledge)}
+
 ## Root Cause
 {root_cause.root_cause}
 
@@ -64,6 +70,7 @@ The diagnosis points to `{root_cause.root_cause}` affecting `{state['service']}`
     return {
         "status": "completed",
         "findings": [*state["findings"], finding.model_dump()],
+        "retrieved_knowledge": retrieved_knowledge,
         "root_cause_analysis": root_cause.model_dump(),
         "recommended_actions": [action.model_dump() for action in action_models],
         "report_markdown": report,
@@ -125,6 +132,7 @@ def build_rca_prompt(state: IncidentState) -> str:
         "evidence_items": state["evidence_items"],
         "evidence_graph": state["evidence_graph"],
         "similar_historical_incidents": state["similar_incidents"],
+        "retrieved_knowledge": state.get("retrieved_knowledge", []),
         "required_json_schema": {
             "root_cause_analysis": {
                 "root_cause": "string",
@@ -147,7 +155,10 @@ def build_rca_prompt(state: IncidentState) -> str:
         "evidence graph. If logs, metrics, or traces are empty or contain "
         "provider errors, say evidence is insufficient instead of guessing. "
         "Do not infer root cause from demo scenario names or historical memory "
-        "alone."
+        "alone. Real-time evidence from logs, metrics, and traces determines "
+        "root cause. Retrieved runbooks are only guidance for diagnosis and "
+        "mitigation. Do not infer a root cause from runbooks if evidence is "
+        "empty."
     )
     mode_context = (
         f"Tool mode: {'fake' if settings.use_fake_tools else 'real'}; "
@@ -155,10 +166,36 @@ def build_rca_prompt(state: IncidentState) -> str:
     )
     return (
         "Diagnose the incident using the provided logs, metrics, traces, and "
-        "similar historical incidents as context. "
+        "similar historical incidents as context. Retrieved Runbook Guidance "
+        "may help remediation, but it is not real-time evidence. "
         f"{guardrails} {mode_context} Return one JSON object and no markdown.\n\n"
         f"{json.dumps(payload, default=str, indent=2, sort_keys=True)}"
     )
+
+
+def retrieve_knowledge_for_state(state: IncidentState) -> list[dict]:
+    settings = Settings.from_env()
+    if not settings.rag_enabled:
+        return []
+    query = _knowledge_query(state)
+    try:
+        results = KnowledgeRetriever(settings).search(query, settings.rag_top_k)
+    except Exception:
+        return []
+    return [item.model_dump() for item in results]
+
+
+def _knowledge_query(state: IncidentState) -> str:
+    evidence_text = " ".join(
+        [
+            state["title"],
+            state["service"],
+            state.get("description") or "",
+            *[item.get("summary", "") for item in state["evidence"]],
+            *[obs.get("summary", "") for obs in state["tool_observations"]],
+        ]
+    )
+    return evidence_text
 
 
 def build_fake_rca(state: IncidentState) -> tuple[RootCauseAnalysis, list[RecommendedAction]]:
@@ -480,6 +517,16 @@ def _format_policy_decisions(state: IncidentState) -> str:
         f"- {record['tool_name']}: {record['policy_decision']} ({record['risk_level']}, {record['status']})"
         + (f" Error: {record['error']}" if record.get("error") else "")
         for record in state["policy_records"]
+    )
+
+
+def _format_retrieved_knowledge(items: list[dict]) -> str:
+    if not items:
+        return "- None."
+    return "\n".join(
+        f"- {item['title']} ({item['path']}, score={item['score']}): "
+        f"{item['content'][:180].replace(chr(10), ' ')}"
+        for item in items
     )
 
 

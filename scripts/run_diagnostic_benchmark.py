@@ -13,12 +13,16 @@ import httpx
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 SCENARIO_FILE = ROOT / "data" / "diagnostic_scenarios.json"
 OMNIOPS_URL = os.getenv("OMNIOPS_URL", "http://localhost:8001").rstrip("/")
 REAL_TOOL_SOURCES = {"loki", "prometheus", "tempo"}
 
+from app.core.config import Settings  # noqa: E402
+
 
 def main() -> int:
+    settings = Settings.from_env()
     try:
         runtime = _get_runtime_status()
     except httpx.HTTPError:
@@ -58,6 +62,13 @@ def main() -> int:
             for item in results
             for source in item["tool_sources"]
         ),
+        "rag_enabled": settings.rag_enabled,
+        "average_retrieved_knowledge_count": round(
+            mean(item["retrieved_knowledge_count"] for item in results),
+            3,
+        )
+        if results
+        else 0,
         "scenarios": results,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
@@ -112,6 +123,7 @@ def _run_scenario(scenario: dict) -> dict:
         "failed_tools": diagnosis.get("failed_tools", []),
         "root_cause": root_cause,
         "confidence": confidence,
+        "retrieved_knowledge_count": len(diagnosis.get("retrieved_knowledge", [])),
         "matched_expected_keywords": matched_keywords,
         "passed": passed,
     }

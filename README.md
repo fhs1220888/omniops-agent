@@ -65,6 +65,7 @@ Core packages:
 - `app/api/`: FastAPI routers for incidents, approvals, and demo endpoints.
 - `app/agents/`: LangGraph nodes and agent orchestration.
 - `app/harness/`: Agent Harness contracts for config, policy, traces, evidence, and result summaries.
+- `app/knowledge/`: local RAG knowledge base for runbooks, SOPs, historical RCA, and architecture docs.
 - `app/tools/`: observability tools, Tool Gateway, registry, and policy engine.
 - `app/memory/`: local JSON incident memory and similar incident recall.
 - `app/rag/`: pure Python in-memory evidence graph.
@@ -111,6 +112,39 @@ Harness status API:
 ```bash
 curl http://127.0.0.1:8001/api/harness/status
 ```
+
+## RAG Knowledge Base
+
+OmniOps now has a local RAG Knowledge Base for long-term diagnostic guidance. It stores runbooks, SOPs, historical RCA notes, and architecture documents. It does not store live logs, metrics, or traces.
+
+```text
+Live Evidence Layer:
+  Prometheus / Loki / Tempo
+
+Knowledge Layer:
+  Local vector store
+  Runbooks / SOPs / historical RCA / architecture docs
+
+Agent Harness:
+  Planner / Tools / Reflection / Report
+```
+
+Default RAG storage uses a lightweight local JSON vector index under `.chroma/` with deterministic local embeddings. This keeps CI stable and avoids external embedding APIs. The configured backend name is `local_chroma`, and the store can be replaced by ChromaDB later without changing the Report Agent boundary.
+
+Build and query the knowledge base:
+
+```bash
+uv run python scripts/ingest_knowledge_base.py --reset
+uv run python scripts/query_knowledge_base.py "redis timeout checkout 504"
+```
+
+API:
+
+- `GET /api/knowledge/status`
+- `POST /api/knowledge/search`
+- `POST /api/knowledge/ingest`
+
+More detail: [docs/rag_knowledge_base.md](/Users/fhs1220/omniops-agent/docs/rag_knowledge_base.md).
 
 ## Core Workflow
 

@@ -40,6 +40,7 @@ class IncidentState(TypedDict):
     agent_traces: list[dict]
     tool_traces: list[dict]
     similar_incidents: list[dict]
+    retrieved_knowledge: list[dict]
     root_cause_analysis: dict | None
     recommended_actions: list[dict]
     report_markdown: str | None

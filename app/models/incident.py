@@ -88,6 +88,15 @@ class SimilarIncident(HistoricalIncident):
     similarity_score: int
 
 
+class RetrievedKnowledgeReference(BaseModel):
+    id: str
+    title: str
+    path: str
+    score: float
+    content: str | None = None
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
 class InvestigationPlan(BaseModel):
     objectives: list[str]
     required_tools: list[SupportedTool]
@@ -154,6 +163,7 @@ class IncidentDiagnosis(BaseModel):
     tool_traces: list[ToolCallTrace] = Field(default_factory=list)
     findings: list[AgentFinding]
     similar_incidents: list[SimilarIncident] = Field(default_factory=list)
+    retrieved_knowledge: list[RetrievedKnowledgeReference] = Field(default_factory=list)
     root_cause_analysis: RootCauseAnalysis
     recommended_actions: list[RecommendedAction]
     report_markdown: str

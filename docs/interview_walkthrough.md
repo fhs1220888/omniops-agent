@@ -24,6 +24,7 @@ Then explain the layers:
 - Observability providers support fake, file, and live Prometheus/Loki/Tempo modes.
 - Evidence items and an evidence graph make the RCA explainable.
 - The Agent Harness layer describes config, policy, evidence contracts, execution trace, and result summaries.
+- The RAG Knowledge Base retrieves runbooks and SOPs as guidance, while Prometheus/Loki/Tempo remain the source of live evidence.
 
 ## How To Prove It Is Not Fake Data
 
@@ -74,6 +75,12 @@ OmniOps is aimed at microservice runtime failures. The current live demo and dia
 - Evidence insufficient handling for unknown services
 
 The multi-agent value is not one `if` branch per failure. The value is the RCA workflow: planner-driven evidence collection, policy-gated tools, logs/metrics/traces correlation, evidence graph construction, reflection on sufficiency, and report generation. In real mode, tools do not fall back to fake data, so if the evidence is empty the system must surface that limitation instead of guessing.
+
+## How To Explain RAG
+
+RAG in OmniOps is for long-term diagnostic knowledge, not real-time telemetry. Runbooks, SOPs, historical RCA notes, and architecture documents are indexed in a local vector store. The Report Agent can retrieve the top matching guidance and include it in the prompt.
+
+The important boundary is that runbooks do not prove the root cause. Prometheus, Loki, and Tempo provide live evidence. If live evidence is missing, the agent should say evidence is insufficient even if a runbook matches the text.
 
 ## Current Limitations
 

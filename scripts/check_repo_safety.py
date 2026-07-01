@@ -16,6 +16,7 @@ RISKY_PATH_PARTS = {
     ".venv/",
     "__pycache__/",
     ".pytest_cache/",
+    ".chroma/",
     "docker/volumes/",
     "docker-volumes/",
     "volumes/",

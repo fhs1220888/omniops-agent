@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 *.log
+.chroma/
 data/*.json
 !data/observability_external_example.json
 !data/diagnostic_scenarios.json

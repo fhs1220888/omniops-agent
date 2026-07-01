@@ -25,6 +25,26 @@ The status endpoint `GET /api/harness/status` combines harness identity, capabil
 
 The LLM is not the harness. It is one model used by the report agent after the harness has gathered and constrained evidence.
 
+## RAG Knowledge Layer
+
+The RAG Knowledge Base lives in `app/knowledge/`. It stores long-term diagnostic knowledge:
+
+- runbooks
+- SOPs
+- historical RCA notes
+- architecture documents
+
+It does not store live logs, metrics, or traces. Live runtime evidence still comes from Prometheus, Loki, and Tempo.
+
+The first implementation uses deterministic local embeddings and a lightweight JSON vector index under `.chroma/`. The configured backend name is `local_chroma`; this gives the project a local vector retrieval boundary without introducing pgvector or a heavy external service.
+
+Report generation uses retrieved knowledge as guidance only. The RCA guardrail remains:
+
+- real-time evidence determines root cause
+- retrieved runbooks can guide diagnosis and mitigation
+- runbooks are not treated as live facts
+- if evidence is empty, the report must say evidence is insufficient
+
 ## Real Mode Anti-Fallback Guarantees
 
 The harness and provider layer preserve the same rule: real mode must not silently fall back to fake data.
