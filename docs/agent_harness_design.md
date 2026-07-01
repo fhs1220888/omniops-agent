@@ -12,6 +12,7 @@ In OmniOps, the model is the LLM used by report generation. The harness is the s
 - Tool Gateway: applies allow/review/deny policy before tool execution.
 - Observability providers: connect fake tools, file observability, or live Prometheus/Loki/Tempo.
 - Evidence contract: requires each tool path to expose source, empty/error state, and evidence items.
+- Skill registry: loads Markdown reusable diagnosis skills and injects selected guidance into report generation.
 - Execution trace: unifies agent traces, tool traces, evidence, and failures.
 - Reflection: checks whether evidence is sufficient and optionally requests another investigation round.
 - Runtime status: exposes whether the system is fake, file-backed, or live real mode.

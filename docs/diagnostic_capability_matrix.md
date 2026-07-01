@@ -26,6 +26,10 @@ The Agent tools query Prometheus, Loki, and Tempo. In live mode they do not fall
 
 RAG retrieves matching runbooks and SOPs from `knowledge_base/`. This helps the Report Agent explain diagnosis steps and mitigation options, but it is not counted as real-time evidence. A runbook match cannot override empty logs, metrics, or traces.
 
+## Skill Guidance Path
+
+Skills under `skills/**/SKILL.md` guide reusable diagnosis behavior. They describe required evidence, reasoning steps, output contracts, and guardrails for each failure type. Skills do not execute tools and do not count as evidence.
+
 ## What This Covers
 
 This is microservice runtime diagnosis, not a universal AIOps engine. The current coverage is strongest for request-path failures where logs, metrics, and traces expose the symptom:

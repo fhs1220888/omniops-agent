@@ -25,6 +25,7 @@ Then explain the layers:
 - Evidence items and an evidence graph make the RCA explainable.
 - The Agent Harness layer describes config, policy, evidence contracts, execution trace, and result summaries.
 - The RAG Knowledge Base retrieves runbooks and SOPs as guidance, while Prometheus/Loki/Tempo remain the source of live evidence.
+- The Skill layer loads Markdown `SKILL.md` files that guide reusable diagnosis behavior.
 
 ## How To Prove It Is Not Fake Data
 
@@ -81,6 +82,18 @@ The multi-agent value is not one `if` branch per failure. The value is the RCA w
 RAG in OmniOps is for long-term diagnostic knowledge, not real-time telemetry. Runbooks, SOPs, historical RCA notes, and architecture documents are indexed in a local vector store. The Report Agent can retrieve the top matching guidance and include it in the prompt.
 
 The important boundary is that runbooks do not prove the root cause. Prometheus, Loki, and Tempo provide live evidence. If live evidence is missing, the agent should say evidence is insufficient even if a runbook matches the text.
+
+## How To Explain Skills
+
+Skills are reusable Markdown diagnosis behaviors, not executable tools. A Skill tells the agent when to use a diagnosis method, what evidence is required, which tools matter, and which guardrails apply.
+
+Example distinction:
+
+- Tool: `query_logs`
+- Runbook: Redis timeout operational guide
+- Skill: Redis timeout diagnosis reasoning workflow
+
+Skills help structure reasoning, but they cannot replace live evidence. If a Redis skill matches but logs, metrics, and traces are empty, the correct answer is evidence insufficient.
 
 ## Current Limitations
 

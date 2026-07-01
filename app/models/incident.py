@@ -97,6 +97,14 @@ class RetrievedKnowledgeReference(BaseModel):
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
+class SelectedSkillReference(BaseModel):
+    id: str
+    name: str
+    path: str
+    reason: str
+    score: float = 0.0
+
+
 class InvestigationPlan(BaseModel):
     objectives: list[str]
     required_tools: list[SupportedTool]
@@ -164,6 +172,7 @@ class IncidentDiagnosis(BaseModel):
     findings: list[AgentFinding]
     similar_incidents: list[SimilarIncident] = Field(default_factory=list)
     retrieved_knowledge: list[RetrievedKnowledgeReference] = Field(default_factory=list)
+    selected_skills: list[SelectedSkillReference] = Field(default_factory=list)
     root_cause_analysis: RootCauseAnalysis
     recommended_actions: list[RecommendedAction]
     report_markdown: str

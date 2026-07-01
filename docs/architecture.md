@@ -45,6 +45,26 @@ Report generation uses retrieved knowledge as guidance only. The RCA guardrail r
 - runbooks are not treated as live facts
 - if evidence is empty, the report must say evidence is insufficient
 
+## Skill Layer
+
+The `skills/**/SKILL.md` files define reusable agent behavior. Skills are Markdown prompt/workflow packages, not tools and not live evidence.
+
+The Skill layer includes:
+
+- `app/skills/loader.py`: loads `skills/**/SKILL.md`
+- `app/skills/registry.py`: exposes skill metadata and lookup
+- `app/skills/selector.py`: deterministically selects relevant skills
+- `app/api/skills.py`: exposes skill status, selection, and content APIs
+
+Skills guide Report Agent behavior by describing required evidence, reasoning steps, output contracts, and guardrails. They do not execute actions. They do not replace Prometheus, Loki, Tempo, or RAG runbooks.
+
+The Report Agent includes selected skill excerpts in the prompt while preserving the evidence-first rule:
+
+- live evidence determines root cause
+- RAG runbooks are operational knowledge
+- skills are diagnosis methodology
+- if evidence is insufficient, say evidence insufficient
+
 ## Real Mode Anti-Fallback Guarantees
 
 The harness and provider layer preserve the same rule: real mode must not silently fall back to fake data.

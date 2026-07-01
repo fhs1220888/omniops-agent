@@ -125,6 +125,9 @@ Knowledge Layer:
   Local vector store
   Runbooks / SOPs / historical RCA / architecture docs
 
+Skill Layer:
+  Markdown reusable diagnosis skills
+
 Agent Harness:
   Planner / Tools / Reflection / Report
 ```
@@ -145,6 +148,35 @@ API:
 - `POST /api/knowledge/ingest`
 
 More detail: [docs/rag_knowledge_base.md](/Users/fhs1220/omniops-agent/docs/rag_knowledge_base.md).
+
+## Markdown Skills
+
+Skills are reusable Markdown behavior packages under `skills/**/SKILL.md`. They guide the agent on when to use evidence, which tools matter, how to reason, and what guardrails to apply.
+
+Skills are different from tools and runbooks:
+
+- Tool: executable function or API.
+- Runbook: human-readable operational knowledge retrieved by RAG.
+- Skill: reusable agent reasoning workflow and prompt guidance.
+
+Current skills:
+
+- `redis_timeout_diagnosis`
+- `downstream_timeout_diagnosis`
+- `mysql_slow_query_diagnosis`
+- `application_exception_diagnosis`
+- `service_unhealthy_diagnosis`
+- `latency_spike_diagnosis`
+- `evidence_sufficiency_review`
+- `rca_report_generation`
+
+Skill APIs:
+
+- `GET /api/skills/status`
+- `POST /api/skills/select`
+- `GET /api/skills/{skill_id}`
+
+More detail: [docs/skills_design.md](/Users/fhs1220/omniops-agent/docs/skills_design.md).
 
 ## Core Workflow
 

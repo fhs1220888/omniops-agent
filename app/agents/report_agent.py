@@ -10,11 +10,17 @@ from app.core.incident_scenarios import detect_incident_scenario
 from app.knowledge.retriever import KnowledgeRetriever
 from app.llm.client import LLMClient, build_llm_client, validate_rca_json
 from app.models.incident import AgentFinding, RecommendedAction, RootCauseAnalysis
+from app.skills.selector import SkillSelector
 
 
 def report_agent(state: IncidentState) -> dict:
     retrieved_knowledge = retrieve_knowledge_for_state(state)
-    state_with_knowledge = {**state, "retrieved_knowledge": retrieved_knowledge}
+    selected_skills = select_skills_for_state(state)
+    state_with_knowledge = {
+        **state,
+        "retrieved_knowledge": retrieved_knowledge,
+        "selected_skills": selected_skills,
+    }
     root_cause, action_models = generate_rca_from_state(state_with_knowledge)
     evidence_lines = "\n".join(
         f"- {item['id']}: {item['summary']}" for item in state["evidence"]
@@ -52,6 +58,9 @@ The diagnosis points to `{root_cause.root_cause}` affecting `{state['service']}`
 ## Retrieved Runbook Guidance
 {_format_retrieved_knowledge(retrieved_knowledge)}
 
+## Selected Agent Skills
+{_format_selected_skills(selected_skills)}
+
 ## Root Cause
 {root_cause.root_cause}
 
@@ -71,6 +80,16 @@ The diagnosis points to `{root_cause.root_cause}` affecting `{state['service']}`
         "status": "completed",
         "findings": [*state["findings"], finding.model_dump()],
         "retrieved_knowledge": retrieved_knowledge,
+        "selected_skills": [
+            {
+                "id": item["id"],
+                "name": item["name"],
+                "path": item["path"],
+                "reason": item["reason"],
+                "score": item["score"],
+            }
+            for item in selected_skills
+        ],
         "root_cause_analysis": root_cause.model_dump(),
         "recommended_actions": [action.model_dump() for action in action_models],
         "report_markdown": report,
@@ -133,6 +152,7 @@ def build_rca_prompt(state: IncidentState) -> str:
         "evidence_graph": state["evidence_graph"],
         "similar_historical_incidents": state["similar_incidents"],
         "retrieved_knowledge": state.get("retrieved_knowledge", []),
+        "selected_skills": _skills_for_prompt(state.get("selected_skills", [])),
         "required_json_schema": {
             "root_cause_analysis": {
                 "root_cause": "string",
@@ -157,8 +177,9 @@ def build_rca_prompt(state: IncidentState) -> str:
         "Do not infer root cause from demo scenario names or historical memory "
         "alone. Real-time evidence from logs, metrics, and traces determines "
         "root cause. Retrieved runbooks are only guidance for diagnosis and "
-        "mitigation. Do not infer a root cause from runbooks if evidence is "
-        "empty."
+        "mitigation. Selected skills are reusable reasoning guidance, not "
+        "real-time evidence. Do not infer a root cause from skills or runbooks "
+        "if evidence is empty."
     )
     mode_context = (
         f"Tool mode: {'fake' if settings.use_fake_tools else 'real'}; "
@@ -167,7 +188,8 @@ def build_rca_prompt(state: IncidentState) -> str:
     return (
         "Diagnose the incident using the provided logs, metrics, traces, and "
         "similar historical incidents as context. Retrieved Runbook Guidance "
-        "may help remediation, but it is not real-time evidence. "
+        "may help remediation, but it is not real-time evidence. Selected "
+        "Agent Skills describe methodology, not facts. "
         f"{guardrails} {mode_context} Return one JSON object and no markdown.\n\n"
         f"{json.dumps(payload, default=str, indent=2, sort_keys=True)}"
     )
@@ -183,6 +205,45 @@ def retrieve_knowledge_for_state(state: IncidentState) -> list[dict]:
     except Exception:
         return []
     return [item.model_dump() for item in results]
+
+
+def select_skills_for_state(state: IncidentState) -> list[dict]:
+    settings = Settings.from_env()
+    if not settings.skills_enabled:
+        return []
+    incident = {
+        "title": state["title"],
+        "service": state["service"],
+        "description": state.get("description"),
+        "symptom": state.get("description") or state["title"],
+    }
+    evidence_summary = " ".join(
+        [item.get("summary", "") for item in state["evidence"]]
+        + [obs.get("summary", "") for obs in state["tool_observations"]]
+    )
+    try:
+        skills = SkillSelector().select(
+            incident=incident,
+            evidence_summary=evidence_summary,
+            top_k=settings.skills_top_k,
+        )
+    except Exception:
+        return []
+    return [skill.model_dump() for skill in skills]
+
+
+def _skills_for_prompt(skills: list[dict]) -> list[dict]:
+    return [
+        {
+            "id": item["id"],
+            "name": item["name"],
+            "path": item["path"],
+            "reason": item["reason"],
+            "score": item["score"],
+            "guidance_excerpt": item["content"][:1200],
+        }
+        for item in skills
+    ]
 
 
 def _knowledge_query(state: IncidentState) -> str:
@@ -526,6 +587,15 @@ def _format_retrieved_knowledge(items: list[dict]) -> str:
     return "\n".join(
         f"- {item['title']} ({item['path']}, score={item['score']}): "
         f"{item['content'][:180].replace(chr(10), ' ')}"
+        for item in items
+    )
+
+
+def _format_selected_skills(items: list[dict]) -> str:
+    if not items:
+        return "- None."
+    return "\n".join(
+        f"- Skill: {item['name']} ({item['path']}). Why selected: {item['reason']}."
         for item in items
     )
 

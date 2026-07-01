@@ -37,6 +37,9 @@ class Settings(BaseModel):
     rag_top_k: int = 3
     embedding_provider: str = "local"
     embedding_dim: int = 384
+    skills_enabled: bool = True
+    skills_dir: str = "skills"
+    skills_top_k: int = 3
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -61,6 +64,9 @@ class Settings(BaseModel):
             rag_top_k=int(_env("RAG_TOP_K", "3", env_values)),
             embedding_provider=_env("EMBEDDING_PROVIDER", "local", env_values),
             embedding_dim=int(_env("EMBEDDING_DIM", "384", env_values)),
+            skills_enabled=_read_bool("SKILLS_ENABLED", default=True, env_values=env_values),
+            skills_dir=_env("SKILLS_DIR", "skills", env_values),
+            skills_top_k=int(_env("SKILLS_TOP_K", "3", env_values)),
         )
 
 

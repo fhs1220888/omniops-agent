@@ -63,8 +63,15 @@ def main() -> int:
             for source in item["tool_sources"]
         ),
         "rag_enabled": settings.rag_enabled,
+        "skills_enabled": settings.skills_enabled,
         "average_retrieved_knowledge_count": round(
             mean(item["retrieved_knowledge_count"] for item in results),
+            3,
+        )
+        if results
+        else 0,
+        "average_selected_skill_count": round(
+            mean(item["selected_skill_count"] for item in results),
             3,
         )
         if results
@@ -124,6 +131,12 @@ def _run_scenario(scenario: dict) -> dict:
         "root_cause": root_cause,
         "confidence": confidence,
         "retrieved_knowledge_count": len(diagnosis.get("retrieved_knowledge", [])),
+        "selected_skill_count": len(diagnosis.get("selected_skills", [])),
+        "selected_skills": [
+            item.get("id")
+            for item in diagnosis.get("selected_skills", [])
+            if item.get("id")
+        ],
         "matched_expected_keywords": matched_keywords,
         "passed": passed,
     }
